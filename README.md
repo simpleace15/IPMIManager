@@ -1,4 +1,4 @@
-# Dell Server Monitor
+# IPMI Monitor for any server.
 
 A react web app for monitoring dell servers over IPMI
 
