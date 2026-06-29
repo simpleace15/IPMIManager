@@ -15,6 +15,7 @@ import {
   Slider,
   Space,
   Typography,
+  Modal,
   message,
 } from "antd"
 import {
@@ -44,6 +45,7 @@ export default class SettingsPage extends Component {
       servers: [],
       settings: {},
       activeTab: "connections",
+      addModalOpen: false,
     }
   }
 
@@ -58,15 +60,20 @@ export default class SettingsPage extends Component {
   }
 
   addServer() {
+    this.setState({ addModalOpen: true })
+  }
+
+  handleAddServer(values) {
     socket.emit("addServer", {
       server: {
-        name: "New server",
-        address: "",
-        username: "",
-        password: "",
-        warnspeed: "3000",
+        name: values.name,
+        address: values.address,
+        username: values.username,
+        password: values.password,
+        warnspeed: values.warnspeed || "3000",
       },
     })
+    this.setState({ addModalOpen: false })
   }
 
   saveSettings(values) {
@@ -113,6 +120,46 @@ export default class SettingsPage extends Component {
             },
           ]}
         />
+
+        <Modal
+          title="Add Server"
+          open={this.state.addModalOpen}
+          onCancel={() => this.setState({ addModalOpen: false })}
+          footer={null}
+          destroyOnClose
+        >
+          <Form
+            {...layout}
+            name="addServer"
+            onFinish={(values) => this.handleAddServer(values)}
+          >
+            <Form.Item label="Name" name="name" rules={[{ required: true, message: "Server name required" }]}>
+              <Input placeholder="R720 main" />
+            </Form.Item>
+            <Form.Item label="Address" name="address" rules={[{ required: true, message: "iDRAC address required" }]}>
+              <Input placeholder="10.99.2.5" />
+            </Form.Item>
+            <Form.Item label="Username" name="username" rules={[{ required: true, message: "Username required" }]}>
+              <Input placeholder="root" />
+            </Form.Item>
+            <Form.Item label="Password" name="password" rules={[{ required: true, message: "Password required" }]}>
+              <Input.Password placeholder="calvin" />
+            </Form.Item>
+            <Form.Item label="Warning RPM" name="warnspeed" initialValue={3000}>
+              <InputNumber min={0} max={20000} style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item {...tailLayout}>
+              <Space>
+                <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
+                  Add Server
+                </Button>
+                <Button onClick={() => this.setState({ addModalOpen: false })}>
+                  Cancel
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
       </Card>
     )
   }
