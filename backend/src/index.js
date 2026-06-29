@@ -113,26 +113,7 @@ function save() {
 }
 setInterval(save, currentSettings.autosaveInterval)
 const clients = []
-servers = servers || [
-	{
-		name: "R720 main",
-		address: "192.168.10.170",
-		username: "root",
-		password: "calvin",
-		warnspeed: "3000",
-		sensordataRaw: [],
-		sensordata: [],
-	},
-	{
-		name: "R720 secondary",
-		address: "192.168.10.169",
-		username: "root",
-		password: "calvin",
-		warnspeed: "3000",
-		sensordataRaw: [],
-		sensordata: [],
-	},
-]
+servers = servers || []
 
 function validateServer(server, existingServers = []) {
 	const errors = []
@@ -153,9 +134,9 @@ function validateServer(server, existingServers = []) {
 
 	// IP / hostname format check
 	if (address) {
-		const octetRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
-		const ipRegex = new RegExp(`^${octetRegex.source}\\.${octetRegex.source}\\.${octetRegex.source}\\.${octetRegex.source}$`)
-		const hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?)*$/
+		const octet = "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+		const ipRegex = new RegExp(`^${octet}\\.${octet}\\.${octet}\\.${octet}$`)
+		const hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,253}[a-zA-Z0-9])?)*$/
 		if (!ipRegex.test(address) && !hostnameRegex.test(address)) {
 			errors.push("address must be a valid IP address or hostname")
 		}

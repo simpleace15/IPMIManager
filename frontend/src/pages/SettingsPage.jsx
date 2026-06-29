@@ -61,9 +61,9 @@ export default class SettingsPage extends Component {
     socket.emit("addServer", {
       server: {
         name: "New server",
-        address: "192.168.0.1",
-        username: "root",
-        password: "calvin",
+        address: "",
+        username: "",
+        password: "",
         warnspeed: "3000",
       },
     })
