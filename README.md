@@ -1,71 +1,52 @@
 # IPMI Manager
 
-A web app for monitoring Dell servers over IPMI — temperatures, fan speeds, power draw, and custom fan control with configurable curves.
+Monitor and control Dell PowerEdge servers via IPMI — temperatures, fan speeds, power draw, and custom fan curves with a clean dark-themed web UI.
 
-## Known working hardware
+![Dashboard](images/image.png)
 
-* R720 with iDRAC7 — Monitoring + fan control
-* R620 [#25](/../../issues/25)
-* R710 with iDRAC6 [#3](/../../issues/3)
-* R730XD iDRAC 8 Enterprise [#87](/../../issues/87)
-* R520 [#77](/../../issues/77)
-* T430 [#90](/../../issues/90)
+## What it does
 
-If you have it running on different hardware or have ipmi commands for setting fan speeds on different hardware, please submit a PR or open an issue.
+- **Live sensor monitoring** — temps, fan RPM, power (volts/amps/watts) polled every 30 seconds
+- **Custom fan curves** — define a temperature-to-fan-speed curve per server, drag sliders to set each point
+- **Dashboard overview** — summary stats (servers online, highest temp, total power draw) plus clickable server cards with color-coded status badges
+- **Server detail view** — sensors grouped into Temperature / Fans / Power sections with trend arrows and threshold-based color coding (green / amber / red)
+- **Settings page** — Connections tab (add/edit/delete servers, configure fan curves) + General tab (polling interval, logging, fan safety limits, Prometheus, autosave)
+- **Log viewer** — real-time log streaming with level filter, search, export, and clear
+- **Dark / light theme** — toggle in the sidebar, persisted across sessions
+- **Prometheus metrics** — scrape-ready endpoint at `/metrics`
+- **Password encryption** — AES-256-GCM at rest (optional)
+- **Optional basic auth** — protect the UI with username/password
 
-## Features
+## Supported hardware
 
-### Monitoring
-* Real-time sensor data: temperatures, fan speeds, power (volts/amps/watts)
-* Dashboard overview with summary stats (server count, highest temp, total power draw, system status)
-* Per-server detail view with sensors organized by category (Temperature, Fans, Power)
-* Trend indicators showing whether values are rising or falling
-* Color-coded values: green (normal), amber (warning), red (critical) based on thresholds
-* Connection status indicator in sidebar (green/amber/red dot)
+Tested with `ipmitool` on Dell iDRAC:
 
-### Fan Control
-* Automatic or manual fan control per server
-* Custom fan curve editor with visual graph — drag sliders to set fan speed (%) at each temperature point
-* Configurable warning RPM threshold per server
-* Fan safety limits (min/max speed) configurable in Settings
+| Model | iDRAC | Status |
+|-------|-------|--------|
+| R720 | iDRAC7 | Monitoring + fan control |
+| R620 | — | Confirmed [#25](/../../issues/25) |
+| R710 | iDRAC6 | Confirmed [#3](/../../issues/3) |
+| R730XD | iDRAC8 Enterprise | Confirmed [#87](/../../issues/87) |
+| R520 | — | Confirmed [#77](/../../issues/77) |
+| T430 | — | Confirmed [#90](/../../issues/90) |
 
-### Settings
-* **Connections** tab: Add/edit/delete IPMI server connections (name, address, username, password, warning RPM, fan curve)
-* **General** tab: Poll interval, log level/retention/max entries, file logging toggle, fan safety limits, Prometheus metrics toggle, autosave interval
+Running on something else? Open an issue or submit a PR.
 
-### Logging
-* Real-time log viewer with level filtering (debug/info/warn/error), search, and export
-* Logs written to disk with configurable retention (default 30 days)
-* In-memory ring buffer (default 1000 entries)
+## Quick start
 
-### Security
-* Optional basic auth (`AUTH_USERNAME` / `AUTH_PASSWORD` env vars)
-* AES-256-GCM password encryption at rest (`ENCRYPTION_KEY` env var)
-* Command injection prevention via `execFile()` (no shell interpolation)
-* Input validation on server additions (IP/hostname format, duplicate detection, length limits)
+### Docker (prebuilt image)
 
-### Other
-* Dark IT-admin themed UI with light mode toggle (persisted in localStorage)
-* Collapsible sidebar
-* Prometheus metrics endpoint at `/metrics`
-* REST API endpoint at `/api/logs`
-- Responsive design (mobile-friendly card grid)
-
-## Setup
-
-The app is designed to run with docker compose, see the `compose.yml` file in this repo for a sample deployment. No extra configuration except for changing the exposed port should be needed.
-
-### Run with prebuilt image
-
-```
+```bash
 git clone https://github.com/simpleace15/IPMIManager.git
 cd IPMIManager
 docker compose up -d
 ```
 
-### Build it yourself
+Then open `http://localhost:8083`.
 
-```
+### Docker (self-build)
+
+```bash
 git clone https://github.com/simpleace15/IPMIManager.git
 cd IPMIManager
 docker compose -f compose-dev.yml up -d --build
@@ -73,50 +54,105 @@ docker compose -f compose-dev.yml up -d --build
 
 ### Local development
 
-```
-# Terminal 1 — backend (dev mode, port 8082)
+Two terminals:
+
+```bash
+# Terminal 1 — backend (port 8082)
 cd backend
 npm install
 npm run dev
 
-# Terminal 2 — frontend dev server (port 3000, proxies socket.io to 8082)
+# Terminal 2 — frontend (port 3000, proxies to backend)
 cd frontend
 npm install
 npm run dev
 ```
 
-Navigate to `localhost:3000` for dev mode, or `localhost:8083` for Docker.
+Open `http://localhost:3000`.
 
-## Environment variables
+## Configuration
 
-All optional — the app runs with sensible defaults if none are set.
+### Servers
+
+Add servers in the UI under **Settings → Connections**. Each server needs:
+
+- **Name** — display label
+- **Address** — iDRAC IP or hostname
+- **Username** — iDRAC user (usually `root`)
+- **Password** — iDRAC password
+- **Warning RPM** — fan speed threshold below which the server shows a warning state
+
+Optionally enable **Manual Fan Control** and configure a custom fan curve.
+
+### Environment variables
+
+All optional — defaults work out of the box.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AUTH_USERNAME` | _(none)_ | If set with `AUTH_PASSWORD`, enables basic auth on all routes |
-| `AUTH_PASSWORD` | _(none)_ | If set with `AUTH_USERNAME`, enables basic auth on all routes |
-| `ENCRYPTION_KEY` | _(none)_ | 32-byte hex/base64 key for AES-256-GCM password encryption at rest. If unset, passwords stored in plaintext (legacy mode) |
+| `AUTH_USERNAME` | unset | Enables basic auth when set with `AUTH_PASSWORD` |
+| `AUTH_PASSWORD` | unset | Enables basic auth when set with `AUTH_USERNAME` |
+| `ENCRYPTION_KEY` | unset | 32-byte hex/base64 key for AES-256-GCM password encryption. If unset, passwords stored in plaintext |
+
+### Settings (in-app)
+
+Adjustable under **Settings → General**:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Poll interval | 30000 ms | How often sensors are polled |
+| Log level | info | Minimum log level (debug/info/warn/error) |
+| Max log entries | 1000 | In-memory log ring buffer size |
+| Log retention | 30 days | Auto-delete log files older than this |
+| File logging | On | Write logs to `data/logs/` |
+| Min fan speed | 0% | Floor for manual fan control |
+| Max fan speed | 100% | Ceiling for manual fan control |
+| Prometheus | On | Expose `/metrics` endpoint |
+| Autosave | 60000 ms | How often server config is saved to disk |
 
 ## Data storage
 
-| Path | Description |
-|------|-------------|
-| `data/servers.json` | Server configurations (passwords encrypted if `ENCRYPTION_KEY` set) |
-| `data/settings.json` | Application settings |
-| `data/logs/ipmimanager-YYYY-MM-DD.log` | Daily log files (if file logging enabled) |
+```
+data/
+├── servers.json          # Server configs (passwords encrypted if ENCRYPTION_KEY set)
+├── settings.json         # App settings
+└── logs/
+    └── ipmimanager-YYYY-MM-DD.log
+```
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /` | Web UI |
+| `GET /info` | Health check |
+| `GET /metrics` | Prometheus metrics |
+| `GET /api/logs` | JSON log entries |
+
+Socket.io events: `servers`, `sensordata`, `getServers`, `updateServer`, `addServer`, `deleteServer`, `getSettings`, `updateSettings`, `getLogs`, `clearLogs`.
 
 ## Tech stack
 
-**Backend:** Node.js, Express, Socket.io v4, prom-client (Prometheus metrics)
-**Frontend:** React 18, Vite 5, Ant Design v5, Socket.io-client v4
-**Tests:** Vitest (16 backend, 2 frontend)
+- **Backend:** Node.js, Express, Socket.io v4, prom-client
+- **Frontend:** React 18, Vite 5, Ant Design v5, Socket.io-client v4
+- **Tests:** Vitest — 16 backend, 2 frontend
+- **Docker:** Multi-stage build, `ipmitool` installed in image
 
-## Screenshots
+## Development
 
-Dashboard overview — summary stats + server cards with status badges:
+```bash
+# Run tests
+cd backend && npx vitest run
+cd frontend && npx vitest run
 
-![Dashboard](images/image.png)
+# Production build
+cd frontend && npx vite build
 
-Settings → Connections — server management with fan curve editor:
+# Format code
+cd backend && npm run format
+cd frontend && npm run format
+```
 
-![Settings](https://i.imgur.com/5LeLWMA.png)
+## Credits
+
+Forked from [Danielv123/serverManager](https://github.com/Danielv123/serverManager). UI/UX redesigned, backend hardened with security fixes, encryption, logging, and settings.
