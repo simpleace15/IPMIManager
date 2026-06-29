@@ -1,52 +1,85 @@
-var exec = require("child_process").exec
+const { execFile } = require("child_process")
+
+function buildBaseArgs(config) {
+	return [
+		"-I", "lanplus",
+		"-H", config.address,
+		"-U", config.username,
+		"-P", config.password,
+	]
+}
 
 function getSensors(config) {
-	return new Promise((resolve) => {
-		let command = `ipmitool -I lanplus -H ${config.address} -U ${config.username} -P ${config.password} sensor`
-		exec(command, (error, out, err) => {
-			if (error) console.error(error)
-			if (err) console.error(err)
-			let data = out
-				.split("\n")
-				.map((x) => x.split("|").map((y) => y.trim()))
-				.filter((x) => x[1] !== "na" && x[0])
-			// console.log(data)
-			resolve(data)
+	return new Promise((resolve, reject) => {
+		const args = [...buildBaseArgs(config), "sensor"]
+		execFile("ipmitool", args, (error, out, err) => {
+			if (error) {
+				return reject(error)
+			}
+			if (!out) {
+				return resolve([])
+			}
+			try {
+				const data = out
+					.split("\n")
+					.map((x) => x.split("|").map((y) => y.trim()))
+					.filter((x) => x[1] !== "na" && x[0])
+				resolve(data)
+			} catch (e) {
+				reject(e)
+			}
 		})
 	})
 }
+
 function enableManualFancontrol(config) {
-	return new Promise((resolve) => {
-		let command = `ipmitool -I lanplus -H ${config.address} -U ${config.username} -P ${config.password} raw 0x30 0x30 0x01 0x00`
-		exec(command, (error, out, err) => {
-			// console.log(error, out, err)
-			// console.log(data)
+	return new Promise((resolve, reject) => {
+		const args = [...buildBaseArgs(config), "raw", "0x30", "0x30", "0x01", "0x00"]
+		execFile("ipmitool", args, (error, out, err) => {
+			if (error) {
+				return reject(error)
+			}
 			resolve(out)
 		})
 	})
 }
+
 function enableAutomaticFancontrol(config) {
-	return new Promise((resolve) => {
-		let command = `ipmitool -I lanplus -H ${config.address} -U ${config.username} -P ${config.password} raw 0x30 0x30 0x01 0x01`
-		exec(command, (error, out, err) => {
-			// console.log(error, out, err)
-			// console.log(data)
+	return new Promise((resolve, reject) => {
+		const args = [...buildBaseArgs(config), "raw", "0x30", "0x30", "0x01", "0x01"]
+		execFile("ipmitool", args, (error, out, err) => {
+			if (error) {
+				return reject(error)
+			}
 			resolve(out)
 		})
 	})
 }
+
 function setFanSpeed(config, speed) {
-	return new Promise((resolve) => {
-		if (process.argv[2] !== "dev") {
-			var command = `ipmitool -I lanplus -H ${config.address} -U ${config.username} -P ${config.password} raw 0x30 0x30 0x02 0xff 0x${speed.toString(16).padStart(2, "0")}`
-		} else {
-			var command = "ls"
+	return new Promise((resolve, reject) => {
+		let hexSpeed
+		try {
+			hexSpeed = speed.toString(16).padStart(2, "0")
+		} catch (e) {
+			return reject(e)
 		}
-		exec(command, (error, out, err) => {
-			// console.log(error, out, err)
-			// console.log(data)
-			resolve(out)
-		})
+		if (process.argv[2] !== "dev") {
+			const args = [...buildBaseArgs(config), "raw", "0x30", "0x30", "0x02", "0xff", `0x${hexSpeed}`]
+			execFile("ipmitool", args, (error, out, err) => {
+				if (error) {
+					return reject(error)
+				}
+				resolve(out)
+			})
+		} else {
+			execFile("ls", [], (error, out, err) => {
+				if (error) {
+					return reject(error)
+				}
+				resolve(out)
+			})
+		}
 	})
 }
 

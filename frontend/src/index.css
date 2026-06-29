@@ -1,6 +1,38 @@
 html,
 body,
 #root {
-	margin: 0;
-	height: 100%;
+  margin: 0;
+  height: 100%;
+}
+
+/* Custom scrollbar - dark theme friendly */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
+}
+
+/* Smooth transitions for theme switching */
+.ant-layout {
+  transition: background 0.3s ease;
+}
+
+/* Antd menu inline items - tighter spacing */
+.ant-menu-inline .ant-menu-item {
+  margin: 2px 0;
+}
+
+/* Cards hover lift effect */
+.ant-card-hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }

@@ -1,1 +1,31 @@
-{"name":"frontend","version":"0.1.0","private":true,"scripts":{"dev":"vite","build":"vite build","preview":"vite preview","start":"vite preview","test":"vitest","test:run":"vitest run","format":"prettier --loglevel warn --write \"src/**/*.{jsx,html,js,css,md}\""},"dependencies":{"@ant-design/icons":"^4.8.3","antd":"^4.24.16","react":"^18.3.1","react-contexify":"^4.1.1","react-dom":"^18.3.1","socket.io-client":"^2.4.0"},"devDependencies":{"@testing-library/jest-dom":"^6.4.2","@testing-library/react":"^15.0.0","@vitejs/plugin-react":"^4.3.1","jsdom":"^24.1.0","prettier":"^2.8.8","vite":"^5.3.3","vitest":"^1.6.1"}}
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "format": "prettier --loglevel warn --write \"src/**/*.{jsx,html,js,css,md}\""
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.3.7",
+    "antd": "^5.17.4",
+    "react": "^18.3.1",
+    "react-contexify": "^4.1.1",
+    "react-dom": "^18.3.1",
+    "socket.io-client": "^4.7.5"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^15.0.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "jsdom": "^24.1.0",
+    "prettier": "^2.8.8",
+    "vite": "^5.3.3",
+    "vitest": "^1.6.1"
+  }
+}

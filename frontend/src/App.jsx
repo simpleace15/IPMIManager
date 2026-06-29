@@ -1,322 +1,320 @@
 import React, { Component } from "react"
-import "antd/dist/antd.css"
+import { ConfigProvider, Layout, Menu, theme as antdTheme, Badge, Tooltip, Button } from "antd"
+import {
+  DesktopOutlined,
+  SettingOutlined,
+  FileTextOutlined,
+  DashboardOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons"
 import { getWebclient } from "./api/index"
-import Switch from "./components/Switch"
-import FanCurveGraph from "./components/FanCurveGraph"
-import { Layout, Menu, Typography, Card, Row, Col, Statistic, Divider, Tooltip, Tabs, Button, Input, Form, Popover } from "antd"
-import { LaptopOutlined, PlusOutlined, ArrowUpOutlined, ArrowDownOutlined, DeleteOutlined, SaveOutlined, SettingOutlined } from "@ant-design/icons"
+import ServerDashboard from "./pages/ServerDashboard"
+import ServerDetail from "./pages/ServerDetail"
+import SettingsPage from "./pages/SettingsPage"
+import LogViewer from "./pages/LogViewer"
+import socket from "./api/index"
 
-const { TabPane } = Tabs
-const { SubMenu } = Menu
-const { Content, Sider } = Layout
-let socket
+const { Sider, Content, Header } = Layout
 
 function getValue(key) {
-	try {
-		return JSON.parse(localStorage[key])
-	} catch (e) {
-		return undefined
-	}
+  try {
+    return JSON.parse(localStorage[key])
+  } catch (e) {
+    return undefined
+  }
 }
 function setValue(key, value) {
-	localStorage[key] = JSON.stringify(value)
-}
-class App extends Component {
-	constructor(props) {
-		super(props)
-		this.state = {
-			editor: true,
-			servers: [],
-			selectedKeys: getValue("selectedKeys") || [],
-		}
-	}
-	componentDidMount() {
-		socket = getWebclient()
-		socket.on("servers", (servers) => this.setState({ servers }))
-		socket.on("sensordata", (data) => {
-			let servers = this.state.servers
-			let server = servers.find((x) => x.name === data.name)
-			if (server) {
-				server.sensordata = data.sensordata
-				this.setState({ servers })
-			} else {
-				console.error("Couldn't find server for sensordata: ", data, this.state)
-			}
-		})
-	}
-	render() {
-		let servers = this.state.servers.filter((x) => this.state.selectedKeys.includes(x.address))
-		return (
-			<Layout style={{ height: "100%" }}>
-				<Layout>
-					<Sider width={200} className="site-layout-background">
-						<Menu
-							multiple
-							mode="inline"
-							defaultSelectedKeys={this.state.selectedKeys}
-							defaultOpenKeys={["servers"]}
-							style={{ height: "100%", borderRight: 0 }}
-							onSelect={({ selectedKeys }) => {
-								console.log(selectedKeys)
-								this.setState({ selectedKeys })
-								setValue("selectedKeys", selectedKeys)
-							}}
-							onDeselect={({ selectedKeys }) => {
-								console.log(selectedKeys)
-								this.setState({ selectedKeys })
-								setValue("selectedKeys", selectedKeys)
-							}}
-						>
-							<SubMenu key="servers" icon={<LaptopOutlined />} title="Servers">
-								{this.state.servers.map((server) => (
-									<Menu.Item key={server.address}>{server.name}</Menu.Item>
-								))}
-							</SubMenu>
-							<Menu.Item key="admin" icon={<SettingOutlined />}>
-								Admin
-							</Menu.Item>
-						</Menu>
-					</Sider>
-					<Layout>
-						<Content
-							className="site-layout-background"
-							style={{
-								padding: 0,
-								margin: 0,
-								minHeight: 280,
-							}}
-						>
-							{servers?.map(renderServerOverview)}
-							{this.state.selectedKeys.includes("admin") && (
-								<Card title="Admin">
-									<Tabs
-										tabBarExtraContent={
-											<Button
-												type="primary"
-												onClick={() => {
-													socket.emit("addServer", {
-														server: {
-															name: "New server",
-															address: "192.168.0.1",
-															username: "root",
-															password: "calvin",
-															warnspeed: "3000",
-														},
-													})
-												}}
-											>
-												<PlusOutlined /> Add server
-											</Button>
-										}
-									>
-										{this.state.servers.map((server) => (
-											<TabPane tab={server.name} key={server.address}>
-												<Form
-													{...layout}
-													name="basic"
-													initialValues={server}
-													onFinish={(data) => {
-														socket.emit("updateServer", {
-															address: server.address,
-															update: data,
-														})
-													}}
-												>
-													<Form.Item
-														label="Name"
-														name="name"
-														rules={[
-															{
-																required: true,
-																message: "Please input a server name",
-															},
-														]}
-													>
-														<Input />
-													</Form.Item>
-													<Form.Item
-														label="Address/hostname"
-														name="address"
-														rules={[
-															{
-																required: true,
-																message: "Please input idrac address/hostname",
-															},
-														]}
-													>
-														<Input />
-													</Form.Item>
-													<Form.Item
-														label="Username"
-														name="username"
-														rules={[
-															{
-																required: true,
-																message: "Please input idrac username (usually root)",
-															},
-														]}
-													>
-														<Input />
-													</Form.Item>
-													<Form.Item
-														label="Password"
-														name="password"
-														rules={[
-															{
-																required: true,
-																message: "Please input the idrac password",
-															},
-														]}
-													>
-														<Input.Password />
-													</Form.Item>
-													<Form.Item
-														label="Warning Speed"
-														name="warnspeed"
-														rules={[
-															{
-																required: true,
-																message: "Please input the fan threshold RPM",
-															},
-														]}
-													>
-														<Input />
-													</Form.Item>
-													<Divider>Custom fan control</Divider>
-													<Form.Item label="Custom fan control" name="manualFanControl">
-														<Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
-													</Form.Item>
-													<Row>
-														<Col span={layout.labelCol.span}></Col>
-														<Col span={layout.wrapperCol.span}>
-															<FanCurveGraph />
-														</Col>
-													</Row>
-													<Form.Item {...tailLayout}>
-														<Button type="primary" htmlType="submit">
-															<SaveOutlined /> Save
-														</Button>
-														<Popover
-															trigger="click"
-															content={
-																<Button type="primary" danger onClick={() => socket.emit("deleteServer", { address: server.address })}>
-																	Delete server
-																</Button>
-															}
-														>
-															<Button danger>
-																<DeleteOutlined /> Delete
-															</Button>
-														</Popover>
-													</Form.Item>
-												</Form>
-											</TabPane>
-										))}
-									</Tabs>
-								</Card>
-							)}
-						</Content>
-					</Layout>
-				</Layout>
-			</Layout>
-		)
-	}
+  localStorage[key] = JSON.stringify(value)
 }
 
-function renderServerOverview(server) {
-	return (
-		server && (
-			<Card>
-				<Typography.Title>{server.name}</Typography.Title>
-				<Divider orientation="left">Power</Divider>
-				<Row>
-					{server.sensordata && server.sensordata
-						.filter((x) => ["Volts", "Amps", "Watts"].includes(x?.unit))
-						.map((sensor, i) => (
-							<Tooltip key={sensor.name + sensor.unit + i} title={`Previous value: ${Math.floor(sensor?.previousValue)}`}>
-								<Col span={4}>
-									<Statistic
-										title={sensor?.name}
-										value={sensor?.value}
-										precision={sensor.unit.includes("Amps") ? 2 : 0}
-										// prefix={sensor?.trend > 0 && <ArrowUpOutlined /> || sensor?.trend < 0 && <ArrowDownOutlined />}
-										suffix={
-											<span>
-												{sensor?.unit} {(sensor?.trend > 0 && <ArrowUpOutlined />) || (sensor?.trend < 0 && <ArrowDownOutlined />)}
-											</span>
-										}
-										valueStyle={{
-											color:
-												(sensor.unit !== "Watts" && " ") ||
-												(Number(sensor.value) < Number(200) && "#3f8600") ||
-												(Number(sensor.value) < Number(sensor.WH) && " ") ||
-												"#cf1322",
-										}}
-									/>
-								</Col>
-							</Tooltip>
-						))}
-				</Row>
-				<Divider orientation="left">Temperature</Divider>
-				<Row>
-					{server.sensordata && server.sensordata
-						.filter((x) => x?.unit === "degrees C")
-						.map((sensor) => (
-							<Tooltip title={`Previous value: ${Math.floor(sensor?.previousValue)}`}>
-								<Col span={4}>
-									<Statistic
-										title={sensor?.name}
-										value={sensor?.value}
-										precision={0}
-										suffix={<span>C {(sensor?.trend > 0 && <ArrowUpOutlined />) || (sensor?.trend < 0 && <ArrowDownOutlined />)}</span>}
-										valueStyle={{
-											color: (Number(sensor.value) > Number(sensor.WL) && Number(sensor.value) < Number(sensor.WH) && " ") || "#cf1322",
-										}}
-									/>
-								</Col>
-							</Tooltip>
-						))}
-				</Row>
-				<Divider orientation="left">Fans</Divider>
-				<Row>
-					{server.sensordata && server.sensordata
-						.filter((x) => ["RPM"].includes(x?.unit))
-						.map((sensor) => (
-							<Tooltip title={`Previous value: ${Math.floor(sensor?.previousValue)}`}>
-								<Col span={4}>
-									<Statistic
-										title={sensor?.name}
-										value={sensor?.value}
-										precision={0}
-										suffix={
-											<span>
-												{sensor?.unit} {(sensor?.trend > 0 && <ArrowUpOutlined />) || (sensor?.trend < 0 && <ArrowDownOutlined />)}
-											</span>
-										}
-										valueStyle={{
-											color: (Number(sensor.value) > Number(sensor.WL) && Number(sensor.value) < Number(server.warnspeed) && " ") /*"#3f8600" green */ || "#cf1322",
-										}}
-									/>
-								</Col>
-							</Tooltip>
-						))}
-				</Row>
-			</Card>
-		)
-	)
+const DARK = {
+  colorBgLayout: "#0a0e17",
+  colorBgContainer: "#111827",
+  colorBgElevated: "#1a1f2e",
+  colorBorder: "#1e2738",
+  colorBorderSecondary: "#162032",
 }
-const layout = {
-	labelCol: {
-		span: 8,
-	},
-	wrapperCol: {
-		span: 16,
-	},
+
+const LIGHT = {}
+
+class App extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      servers: [],
+      activeView: getValue("activeView") || "dashboard",
+      selectedServer: getValue("selectedServer") || null,
+      collapsed: getValue("collapsed") || false,
+      darkMode: getValue("darkMode") !== false,
+      connectionStatus: "connecting",
+    }
+  }
+
+  componentDidMount() {
+    const s = getWebclient()
+    s.on("servers", (servers) => this.setState({ servers, connectionStatus: "connected" }))
+    s.on("sensordata", (data) => {
+      const servers = this.state.servers
+      const server = servers.find((x) => x.name === data.name)
+      if (server) {
+        server.sensordata = data.sensordata
+        this.setState({ servers })
+      }
+    })
+    s.on("connect", () => this.setState({ connectionStatus: "connected" }))
+    s.on("disconnect", () => this.setState({ connectionStatus: "disconnected" }))
+    s.on("connect_error", () => this.setState({ connectionStatus: "disconnected" }))
+  }
+
+  setView(view, serverAddress) {
+    this.setState({ activeView: view, selectedServer: serverAddress || null })
+    setValue("activeView", view)
+    if (serverAddress) setValue("selectedServer", serverAddress)
+  }
+
+  toggleCollapsed() {
+    const collapsed = !this.state.collapsed
+    this.setState({ collapsed })
+    setValue("collapsed", collapsed)
+  }
+
+  toggleDarkMode() {
+    const darkMode = !this.state.darkMode
+    this.setState({ darkMode })
+    setValue("darkMode", darkMode)
+  }
+
+  renderServerStatus(server) {
+    const hasData = server.sensordata && server.sensordata.length > 0
+    const temps = hasData ? server.sensordata.filter((s) => s.unit === "degrees C") : []
+    const maxTemp = temps.length ? Math.max(...temps.map((s) => Number(s.value))) : null
+    const fans = hasData ? server.sensordata.filter((s) => s.unit === "RPM") : []
+    const minFan = fans.length ? Math.min(...fans.map((s) => Number(s.value))) : null
+    const warnSpeed = Number(server.warnspeed) || 3000
+
+    let color = "#8c8c8c"
+    if (hasData) {
+      if (maxTemp !== null && maxTemp > 75) color = "#cf1322"
+      else if (minFan !== null && minFan < warnSpeed) color = "#faad14"
+      else color = "#52c41a"
+    }
+    return React.createElement(Badge, { color, text: server.name })
+  }
+
+  render() {
+    const darkMode = this.state.darkMode
+    const selectedServer = this.state.servers.find((s) => s.address === this.state.selectedServer)
+
+    const menuItems = [
+      { key: "dashboard", icon: React.createElement(DashboardOutlined), label: "Dashboard" },
+      {
+        key: "servers",
+        icon: React.createElement(DesktopOutlined),
+        label: "Servers",
+        children: this.state.servers.map((server) => ({
+          key: "server_" + server.address,
+          label: this.renderServerStatus(server),
+        })),
+      },
+      { key: "settings", icon: React.createElement(SettingOutlined), label: "Settings" },
+      { key: "logs", icon: React.createElement(FileTextOutlined), label: "Logs" },
+    ]
+
+    let activeKey = this.state.activeView
+    if (this.state.activeView === "server" && this.state.selectedServer) {
+      activeKey = "server_" + this.state.selectedServer
+    }
+
+    const handleMenuClick = (info) => {
+      const key = info.key
+      if (key === "dashboard") this.setView("dashboard")
+      else if (key === "settings") this.setView("settings")
+      else if (key === "logs") this.setView("logs")
+      else if (key.indexOf("server_") === 0) {
+        const addr = key.substring(7)
+        this.setView("server", addr)
+      }
+    }
+
+    const themeConfig = {
+      algorithm: darkMode ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+      token: {
+        colorPrimary: "#1668dc",
+        borderRadius: 6,
+        ...(darkMode ? DARK : LIGHT),
+      },
+    }
+
+    const siderStyle = {
+      overflow: "auto",
+      height: "100vh",
+      position: "sticky",
+      top: 0,
+      left: 0,
+      background: darkMode ? "#0d1117" : undefined,
+      borderRight: darkMode ? "1px solid #1e2738" : undefined,
+    }
+
+    const headerStyle = {
+      padding: "0 24px",
+      background: darkMode ? "#0d1117" : "#fff",
+      borderBottom: darkMode ? "1px solid #1e2738" : "1px solid #f0f0f0",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      height: 48,
+      lineHeight: "48px",
+    }
+
+    const contentStyle = {
+      margin: 0,
+      padding: 24,
+      background: darkMode ? "#0a0e17" : "#f5f5f5",
+      minHeight: "calc(100vh - 48px)",
+      overflow: "auto",
+    }
+
+    const breadcrumbText = this.state.activeView === "dashboard"
+      ? "Dashboard"
+      : this.state.activeView === "server" && selectedServer
+        ? selectedServer.name
+        : this.state.activeView === "settings"
+          ? "Settings"
+          : this.state.activeView === "logs"
+            ? "Logs"
+            : ""
+
+    const connColor = this.state.connectionStatus === "connected"
+      ? "#52c41a"
+      : this.state.connectionStatus === "connecting"
+        ? "#faad14"
+        : "#cf1322"
+
+    const connTooltip = this.state.connectionStatus === "connected"
+      ? "Connected"
+      : this.state.connectionStatus === "connecting"
+        ? "Connecting..."
+        : "Disconnected"
+
+    const siderWidth = this.state.collapsed ? 80 : 240
+
+    return (
+      <ConfigProvider theme={themeConfig}>
+        <Layout style={{ minHeight: "100vh" }}>
+          <Sider
+            collapsible
+            collapsed={this.state.collapsed}
+            onCollapse={() => this.toggleCollapsed()}
+            width={240}
+            style={siderStyle}
+          >
+            <div style={{
+              height: 56,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: this.state.collapsed ? "center" : "flex-start",
+              padding: this.state.collapsed ? "0" : "0 20px",
+              borderBottom: darkMode ? "1px solid #1e2738" : "1px solid #f0f0f0",
+              gap: "10px",
+            }}>
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                background: "linear-gradient(135deg, #1668dc, #0c4a8e)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 14,
+                flexShrink: 0,
+              }}>
+                IP
+              </div>
+              {!this.state.collapsed && (
+                <span style={{ fontWeight: 600, fontSize: 14, color: darkMode ? "#e6eaf0" : "#1f1f1f", whiteSpace: "nowrap" }}>
+                  IPMI Manager
+                </span>
+              )}
+            </div>
+
+            <Menu
+              mode="inline"
+              selectedKeys={[activeKey]}
+              defaultOpenKeys={["servers"]}
+              style={{ borderRight: 0, background: "transparent", paddingTop: 8 }}
+              items={menuItems}
+              onClick={handleMenuClick}
+            />
+
+            <div style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: "12px 16px",
+              borderTop: darkMode ? "1px solid #1e2738" : "1px solid #f0f0f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+            }}>
+              <Tooltip title={connTooltip}>
+                <Badge color={connColor} />
+              </Tooltip>
+              <Tooltip title={darkMode ? "Switch to Light" : "Switch to Dark"}>
+                <Button
+                  type="text"
+                  size="small"
+                  onClick={() => this.toggleDarkMode()}
+                  style={{ color: darkMode ? "#8b96a8" : "#595959" }}
+                >
+                  {darkMode ? "Light" : "Dark"}
+                </Button>
+              </Tooltip>
+            </div>
+          </Sider>
+
+          <Layout>
+            <Header style={headerStyle}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ color: darkMode ? "#8b96a8" : "#595959", fontSize: 13 }}>
+                  {breadcrumbText}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Tooltip title="Refresh data">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ReloadOutlined />}
+                    onClick={() => socket.emit("getServers")}
+                    style={{ color: darkMode ? "#8b96a8" : "#595959" }}
+                  />
+                </Tooltip>
+              </div>
+            </Header>
+
+            <Content style={contentStyle}>
+              {this.state.activeView === "dashboard" && (
+                <ServerDashboard
+                  servers={this.state.servers}
+                  darkMode={darkMode}
+                  onSelectServer={(addr) => this.setView("server", addr)}
+                />
+              )}
+              {this.state.activeView === "server" && selectedServer && (
+                <ServerDetail server={selectedServer} darkMode={darkMode} />
+              )}
+              {this.state.activeView === "settings" && <SettingsPage darkMode={darkMode} />}
+              {this.state.activeView === "logs" && <LogViewer darkMode={darkMode} />}
+            </Content>
+          </Layout>
+        </Layout>
+      </ConfigProvider>
+    )
+  }
 }
-const tailLayout = {
-	wrapperCol: {
-		offset: 8,
-		span: 16,
-	},
-}
+
 export default App
